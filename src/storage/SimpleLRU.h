@@ -5,7 +5,9 @@
 #include <memory>
 #include <mutex>
 #include <string>
-
+#include <utility>
+#include <iostream>
+#include <memory>
 #include <afina/Storage.h>
 
 namespace Afina {
@@ -15,13 +17,31 @@ namespace Backend {
  * # Map based implementation
  * That is NOT thread safe implementaiton!!
  */
-class SimpleLRU : public Afina::Storage {
+class SimpleLRU : public Afina::Storage
+{
 public:
-    SimpleLRU(size_t max_size = 1024) : _max_size(max_size) {}
+    SimpleLRU(size_t max_size = 1024)
+        :_max_size(max_size),_current_size(0), _lru_head(nullptr), _lru_tail(nullptr)
+    {
 
-    ~SimpleLRU() {
+    }
+
+    ~SimpleLRU()
+    {
+		if (_lru_head == nullptr)
+        {
+		    return;
+	    }
         _lru_index.clear();
-        _lru_head.reset(); // TODO: Here is stack overflow
+
+
+        while(_lru_head->next != nullptr )
+        {
+            std::unique_ptr<lru_node> dn;
+            dn.swap(_lru_head);
+            _lru_head.swap(dn->next);
+        }
+        _lru_head.reset();
     }
 
     // Implements Afina::Storage interface
@@ -41,27 +61,42 @@ public:
 
 private:
     // LRU cache node
-    using lru_node = struct lru_node {
+    using lru_node = struct lru_node
+    {
+
         std::string key;
         std::string value;
-        std::unique_ptr<lru_node> prev;
+        lru_node *prev; //fixed
         std::unique_ptr<lru_node> next;
+
+		lru_node (const std::string &k,const std::string &v)
+            :key(k), value(v), prev(nullptr),next(nullptr)
+        {
+
+        }
     };
 
     // Maximum number of bytes could be stored in this cache.
     // i.e all (keys+values) must be less the _max_size
-    std::size_t _max_size;
+    std::size_t _max_size, _current_size;
 
     // Main storage of lru_nodes, elements in this list ordered descending by "freshness": in the head
     // element that wasn't used for longest time.
     //
     // List owns all nodes
     std::unique_ptr<lru_node> _lru_head;
+    lru_node* _lru_tail; //tail node
 
-    // Index of nodes from list above, allows fast random access to elements by lru_node#key
-    std::map<std::reference_wrapper<std::string>, std::reference_wrapper<lru_node>, std::less<std::string>> _lru_index;
+    // Index of nodes from list above
+    std::map<std::string,std::reference_wrapper<lru_node> > _lru_index;
+
+    bool _Insert(const std::string &key, const std::string &value);
+    bool _Replace(const std::string &key,const std::string &value);
+    bool _Delete(lru_node &delete_node);
+    bool _MoveTail(lru_node &node);
+    bool _DecreaseSizeIfNeeded(size_t oldNodeSize, size_t newNodeSize);
+    bool _DeleteHead();
 };
-
 } // namespace Backend
 } // namespace Afina
 
