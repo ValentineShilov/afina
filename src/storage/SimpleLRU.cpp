@@ -38,8 +38,10 @@ bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value)
 bool SimpleLRU::Set(const std::string &key, const std::string &value)
 {
   if( (value.size() + key.size() ) > _max_size)
+	{
     return false;
-  if(_lru_index.find(key) != _lru_index.end())
+	}
+	if(_lru_index.find(key) != _lru_index.end())
 	{
 		return _Replace(key,value);
 	}
@@ -105,8 +107,10 @@ bool SimpleLRU::_Insert(const std::string &key, const std::string &value)
 bool SimpleLRU::_DecreaseSizeIfNeeded(size_t oldNodeSize, size_t newNodeSize)
 {
 	while(_current_size - oldNodeSize + newNodeSize > _max_size)
+	{
      _DeleteHead();
-  _current_size += newNodeSize - oldNodeSize;
+	 }
+	_current_size += newNodeSize - oldNodeSize;
 	return true;
 }
 
@@ -118,20 +122,20 @@ bool SimpleLRU::_Replace(const std::string &key, const std::string &nn)
 	{
 		lru_node&  on  = _lru_index.find(key)->second.get();
 		_DecreaseSizeIfNeeded(on.value.size(), nn.size());
-
-
 		on.value = nn;
-
 		return _MoveTail(on);
 	}
 	return false;
 }
 
-bool SimpleLRU::_MoveTail(lru_node &node){
+bool SimpleLRU::_MoveTail(lru_node &node)
+{
   //moving tail to the tail node - do nothing
 	if( &node == _lru_tail )
+	{
     return true;
-  //if head
+	}
+	//if head
   if(&node == _lru_head.get())
 	{
     _lru_head.swap(node.next);
