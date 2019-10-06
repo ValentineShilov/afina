@@ -6,7 +6,6 @@
 #include <mutex>
 #include <string>
 #include <utility>
-#include <iostream>
 #include <memory>
 #include <afina/Storage.h>
 
@@ -21,27 +20,29 @@ class SimpleLRU : public Afina::Storage
 {
 public:
     SimpleLRU(size_t max_size = 1024)
-        :_max_size(max_size),_current_size(0), _lru_head(nullptr), _lru_tail(nullptr)
+        :_max_size(max_size),_current_size(0), _lru_head(new lru_node())
     {
+
+        _lru_head->next = std::unique_ptr<lru_node>(new lru_node());
+        _lru_tail = _lru_head->next.get();
+        _lru_tail->prev = _lru_head.get();
 
     }
 
     ~SimpleLRU()
     {
-		if (_lru_head == nullptr)
-        {
-		    return;
-	    }
-        _lru_index.clear();
 
+      _lru_index.clear();
 
-        while(_lru_head->next != nullptr )
-        {
-            std::unique_ptr<lru_node> dn;
-            dn.swap(_lru_head);
-            _lru_head.swap(dn->next);
-        }
-        _lru_head.reset();
+      while (_lru_head->next != nullptr)
+      {
+          std::unique_ptr<lru_node> dn;
+          dn.swap(_lru_head);
+          _lru_head.swap(dn->next);
+      }
+
+      _lru_head.reset();
+
     }
 
     // Implements Afina::Storage interface
@@ -64,13 +65,18 @@ private:
     using lru_node = struct lru_node
     {
 
-        std::string key;
+        const std::string key;
         std::string value;
         lru_node *prev; //fixed
         std::unique_ptr<lru_node> next;
+            lru_node (const std::string &k, const std::string &v)
+            :key(k), value(v), prev(nullptr), next(nullptr)
+        {
 
-		lru_node (const std::string &k,const std::string &v)
-            :key(k), value(v), prev(nullptr),next(nullptr)
+        }
+    //  private:
+    //    friend class SimpleLRU;
+        lru_node() : key(""), value(""), prev(nullptr), next(nullptr)
         {
 
         }
@@ -85,17 +91,18 @@ private:
     //
     // List owns all nodes
     std::unique_ptr<lru_node> _lru_head;
-    lru_node* _lru_tail; //tail node
+    lru_node * _lru_tail; //tail node
 
-    // Index of nodes from list above
-    std::map<std::string,std::reference_wrapper<lru_node> > _lru_index;
+    // Index of nodes from list above 
+    std::map<std::reference_wrapper<const std::string>, std::reference_wrapper<lru_node>, std::less<std::string>> _lru_index;
+    bool Insert(const std::string &key, const std::string &value);
+    bool Replace(lru_node &orig, const std::string &value);
+    bool Delete(lru_node &delete_node);
 
-    bool _Insert(const std::string &key, const std::string &value);
-    bool _Replace(const std::string &key,const std::string &value);
-    bool _Delete(lru_node &delete_node);
-    bool _MoveTail(lru_node &node);
-    bool _DecreaseSizeIfNeeded(size_t oldNodeSize, size_t newNodeSize);
-    bool _DeleteHead();
+    bool DecreaseSizeIfNeeded(size_t oldNodeSize, size_t newNodeSize);
+
+    bool MoveLast(lru_node &node);
+    bool DeleteFirst();
 };
 } // namespace Backend
 } // namespace Afina
