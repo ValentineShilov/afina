@@ -3,11 +3,13 @@
 
 #include <atomic>
 #include <thread>
-
+#include <map>
 #include <afina/network/Server.h>
-
-namespace spdlog {
-class logger;
+#include <condition_variable>
+#include <mutex>
+namespace spdlog
+{
+  class logger;
 }
 
 namespace Afina {
@@ -52,6 +54,13 @@ private:
 
     // Thread to run network on
     std::thread _thread;
+    void ThreadFunction(int client_socket) ;
+    std::map<int, std::thread> threads;
+    mutable std::mutex threads_mutex;
+    size_t max_threads;
+    std::condition_variable allWorkersFinished;
+
+
 };
 
 } // namespace MTblocking
