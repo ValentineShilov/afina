@@ -7,7 +7,7 @@ namespace Backend {
 bool SimpleLRU::Put(const std::string &key, const std::string &value)
 {
 
-	if(  (value.size() + key.size() ) > _max_size)
+	if( (key.length() == 0) || (value.size() + key.size() ) > _max_size)
 	{
     return false;
 	}
@@ -27,7 +27,7 @@ return true;
 bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value)
 {
 
-  if( (value.size() + key.size()) <= _max_size)
+  if( (key.length() == 0) || ( (value.size() + key.size()) <= _max_size) )
   {
 		if(_lru_index.find(std::reference_wrapper<const std::string>(key))==_lru_index.end())
 		{
@@ -124,14 +124,19 @@ bool SimpleLRU::DecreaseSizeIfNeeded(size_t oldNodeSize, size_t newNodeSize)
 bool SimpleLRU::Replace(lru_node &orig, const std::string &value)
 {
 
-
+		std::string key(orig.key);
 		DecreaseSizeIfNeeded(orig.value.size(), value.size());
-    _current_size += value.size();
-		_current_size -= orig.value.size();
+		if(Delete(orig))
+		{
+			return Insert(key, value);
+		}
+		return false;
+		//_current_size += value.size();
+	//	_current_size -= orig.value.size();
 
-		orig.value = value;
+	//	orig.value = value;
 
-		return MoveLast(orig);
+		//return MoveLast(orig);
 
 
 }
@@ -158,6 +163,10 @@ bool SimpleLRU::DeleteFirst()
 
 bool SimpleLRU::Delete(lru_node &rn)
 {
+	//special case - trying to delete fake nodes
+	//return true;
+	if(rn.key.length() == 0)
+		return false;
 
   auto s(rn.key.size() + rn.value.size());
   std::unique_ptr<lru_node> tn;
