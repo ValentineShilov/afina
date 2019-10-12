@@ -124,14 +124,19 @@ bool SimpleLRU::DecreaseSizeIfNeeded(size_t oldNodeSize, size_t newNodeSize)
 bool SimpleLRU::Replace(lru_node &orig, const std::string &value)
 {
 
-
+		std::string key(orig.key);
 		DecreaseSizeIfNeeded(orig.value.size(), value.size());
-    _current_size += value.size();
-		_current_size -= orig.value.size();
+		if(Delete(orig))
+		{
+			return Insert(key, value);
+		}
+		return false;
+		//_current_size += value.size();
+	//	_current_size -= orig.value.size();
 
-		orig.value = value;
+	//	orig.value = value;
 
-		return MoveLast(orig);
+		//return MoveLast(orig);
 
 
 }

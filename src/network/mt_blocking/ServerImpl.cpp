@@ -236,6 +236,12 @@ void ServerImpl::ThreadFunction(int client_socket)
                   parser.Reset();
               }
           } // while (readed_bytes)
+          /*
+          if(!running.load())
+          {
+            break;
+          }
+          */
       }
 
       if (readed_bytes == 0) {
