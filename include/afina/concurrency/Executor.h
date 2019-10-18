@@ -28,7 +28,10 @@ class Executor {
         kStopped
     };
 
-    Executor(std::string name, int size);
+    Executor(std::string name, int size) : low_watermark(1), hight_watermark(10), max_queue_size(80), idle_time(400), nfree(0)
+    {
+
+    } ;
     ~Executor();
 
     /**
@@ -37,7 +40,20 @@ class Executor {
      *
      * In case if await flag is true, call won't return until all background jobs are done and all threads are stopped
      */
-    void Stop(bool await = false);
+    void Stop(bool await = false)
+    {
+      std::unique_lock<std::mutex> lock(mutex);
+      state = State::kStopping;
+
+
+      if(await)
+      {
+          stop_cv.wait(lock, [&]() { return threads.size()==0; });
+
+      }
+      state = State::kStopped;
+
+    }
 
     /**
      * Add function to be executed on the threadpool. Method returns true in case if task has been placed
@@ -46,20 +62,7 @@ class Executor {
      * That function doesn't wait for function result. Function could always be written in a way to notify caller about
      * execution finished by itself
      */
-    template <typename F, typename... Types> bool Execute(F &&func, Types... args) {
-        // Prepare "task"
-        auto exec = std::bind(std::forward<F>(func), std::forward<Types>(args)...);
 
-        std::unique_lock<std::mutex> lock(this->mutex);
-        if (state != State::kRun) {
-            return false;
-        }
-
-        // Enqueue new task
-        tasks.push_back(exec);
-        empty_condition.notify_one();
-        return true;
-    }
 
 private:
     // No copy/move/assign allowed
@@ -71,7 +74,7 @@ private:
     /**
      * Main function that all pool threads are running. It polls internal task queue and execute tasks
      */
-    friend void perform(Executor *executor);
+    friend void perform(Executor *ex);
 
     /**
      * Mutex to protect state below from concurrent modification
@@ -82,7 +85,7 @@ private:
      * Conditional variable to await new data in case of empty queue
      */
     std::condition_variable empty_condition;
-
+    std::condition_variable stop_cv;
     /**
      * Vector of actual threads that perorm execution
      */
@@ -97,7 +100,22 @@ private:
      * Flag to stop bg threads
      */
     State state;
+
+    size_t low_watermark;
+    size_t hight_watermark;
+    size_t max_queue_size;
+    size_t idle_time;
+    size_t nfree;
+  //  size_t nthreads;
+
+  public:
+    template <typename F, typename... Types> bool Execute(F &&func, Types... args) ;
+
+
 };
+
+
+
 
 } // namespace Concurrency
 } // namespace Afina
