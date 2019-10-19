@@ -1,16 +1,15 @@
 #ifndef AFINA_NETWORK_MT_BLOCKING_SERVER_H
 #define AFINA_NETWORK_MT_BLOCKING_SERVER_H
 
-#include <atomic>
-#include <thread>
-#include <map>
-#include <afina/network/Server.h>
-#include <condition_variable>
-#include <mutex>
 #include "afina/concurrency/Executor.h"
-namespace spdlog
-{
-  class logger;
+#include <afina/network/Server.h>
+#include <atomic>
+#include <condition_variable>
+#include <map>
+#include <mutex>
+#include <thread>
+namespace spdlog {
+class logger;
 }
 
 namespace Afina {
@@ -55,13 +54,12 @@ private:
 
     // Thread to run network on
     std::thread _thread;
-    void ThreadFunction(int client_socket) ;
+    void ThreadFunction(int client_socket);
     std::map<int, std::thread> threads;
     mutable std::mutex threads_mutex;
     size_t max_threads;
     std::condition_variable allWorkersFinished;
     Afina::Concurrency::Executor executor;
-
 };
 
 } // namespace MTblocking
