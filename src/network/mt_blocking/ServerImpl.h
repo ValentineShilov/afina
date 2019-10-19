@@ -7,6 +7,7 @@
 #include <afina/network/Server.h>
 #include <condition_variable>
 #include <mutex>
+#include "afina/concurrency/Executor.h"
 namespace spdlog
 {
   class logger;
@@ -59,7 +60,7 @@ private:
     mutable std::mutex threads_mutex;
     size_t max_threads;
     std::condition_variable allWorkersFinished;
-
+    Afina::Concurrency::Executor executor;
 
 };
 

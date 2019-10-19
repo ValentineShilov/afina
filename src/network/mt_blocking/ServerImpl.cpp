@@ -22,13 +22,14 @@
 #include <afina/logging/Service.h>
 
 #include "protocol/Parser.h"
-
+#include <iostream>
 namespace Afina {
 namespace Network {
 namespace MTblocking {
 
 // See Server.h
-ServerImpl::ServerImpl(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Logging::Service> pl) : Server(ps, pl), max_threads(20) {}
+ServerImpl::ServerImpl(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Logging::Service> pl) : Server(ps, pl), max_threads(20),
+ executor("executor", max_threads, 4, 10, 3000)  {}
 
 // See Server.h
 ServerImpl::~ServerImpl() {}
@@ -37,6 +38,10 @@ ServerImpl::~ServerImpl() {}
 void ServerImpl::Start(uint16_t port, uint32_t n_accept, uint32_t n_workers) {
     _logger = pLogging->select("network");
     _logger->info("Start mt_blocking network service");
+
+    executor.Start();
+    //Executor(std::string name, size_t hight_watermark=10, size_t max_queue_size = 1000, size_t low_watermark = 1, size_t  idle_time=400) : low_watermark(low_watermark), hight_watermark(hight_watermark), max_queue_size(max_queue_size), idle_time(idle_time), nfree(0)
+
 
     sigset_t sig_mask;
     sigemptyset(&sig_mask);
@@ -147,14 +152,14 @@ void ServerImpl::OnRun() {
         // TODO: Start new thread and process data from/to connection
         {
 
-            std::lock_guard<std::mutex> lck(threads_mutex);
-            if (threads.size() >= max_threads)
-            {
-                close(client_socket);
-                continue;
-            }
-
-            threads.insert(std::pair<int, std::thread>(client_socket, std::thread(&ServerImpl::ThreadFunction, this, client_socket)));
+          //  _logger->debug("Starting executor {}\n", client_socket );
+          
+          if(!executor.Execute(&ServerImpl::ThreadFunction, this, client_socket))
+          {
+              _logger->debug("Executor busy {}\n", client_socket );
+              close(client_socket);
+          }
+            //threads.insert(std::pair<int, std::thread>(client_socket, std::thread(&ServerImpl::ThreadFunction, this, client_socket)));
         }
 
     }
@@ -262,6 +267,8 @@ void ServerImpl::ThreadFunction(int client_socket)
   parser.Reset();
 
 
+/*
+
   //setting that thread finished
   {
      std::lock_guard<std::mutex> lck(threads_mutex);
@@ -274,6 +281,7 @@ void ServerImpl::ThreadFunction(int client_socket)
        allWorkersFinished.notify_all();
      }
   }
+  */
 }
 
 } // namespace MTblocking

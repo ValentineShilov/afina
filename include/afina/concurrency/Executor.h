@@ -8,14 +8,26 @@
 #include <queue>
 #include <string>
 #include <thread>
-
+//#include <iostream>
 namespace Afina {
 namespace Concurrency {
 
+class Executor;
+void perform(Afina::Concurrency::Executor *);
 /**
  * # Thread pool
  */
-class Executor {
+class Executor
+{
+
+public:
+  Executor(std::string name, size_t hight_watermark=10, size_t max_queue_size = 1000, size_t low_watermark = 1, size_t  idle_time=400) : low_watermark(low_watermark), hight_watermark(hight_watermark), max_queue_size(max_queue_size), idle_time(idle_time), nfree(0)
+  {
+    //state=kRun;
+    state = State::kStopped;
+  } ;
+  friend void perform(Executor *ex);
+
     enum class State {
         // Threadpool is fully operational, tasks could be added and get executed
         kRun,
@@ -28,11 +40,16 @@ class Executor {
         kStopped
     };
 
-    Executor(std::string name, int size) : low_watermark(1), hight_watermark(10), max_queue_size(80), idle_time(400), nfree(0)
-    {
 
-    } ;
-    ~Executor();
+    ~Executor()
+    {
+      std::unique_lock<std::mutex> lock(mutex);
+      if(state==State::kRun)
+      {
+        Stop(false);
+      }
+
+    }
 
     /**
      * Signal thread pool to stop, it will stop accepting new jobs and close threads just after each become
@@ -40,20 +57,11 @@ class Executor {
      *
      * In case if await flag is true, call won't return until all background jobs are done and all threads are stopped
      */
-    void Stop(bool await = false)
-    {
-      std::unique_lock<std::mutex> lock(mutex);
-      state = State::kStopping;
+
+    void Start();
 
 
-      if(await)
-      {
-          stop_cv.wait(lock, [&]() { return threads.size()==0; });
-
-      }
-      state = State::kStopped;
-
-    }
+    void Stop(bool await = false);
 
     /**
      * Add function to be executed on the threadpool. Method returns true in case if task has been placed
@@ -74,7 +82,6 @@ private:
     /**
      * Main function that all pool threads are running. It polls internal task queue and execute tasks
      */
-    friend void perform(Executor *ex);
 
     /**
      * Mutex to protect state below from concurrent modification
@@ -109,12 +116,40 @@ private:
   //  size_t nthreads;
 
   public:
-    template <typename F, typename... Types> bool Execute(F &&func, Types... args) ;
+    template <typename F, typename... Types>
+    bool Execute(F &&func, Types... args)
+    {
+      // Prepare "task"
+    
+      auto exec = std::bind(std::forward<F>(func), std::forward<Types>(args)...);
+
+      std::unique_lock<std::mutex> lock(this->mutex);
+      if (state != State::kRun)
+      {
+
+          return false;
+      }
+
+      // Enqueue new task
+      if(tasks.size() >= max_queue_size)
+      {
+        return false;
+      }
+      if(nfree==0 && threads.size()<hight_watermark)
+      {
+
+        threads.emplace_back(&perform, this);
+
+      }
+      tasks.push_back(exec);
+
+      empty_condition.notify_one();
+      return true;
+  }
 
 
-};
 
-
+};//executor
 
 
 } // namespace Concurrency
