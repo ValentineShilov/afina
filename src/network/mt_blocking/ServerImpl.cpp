@@ -157,12 +157,12 @@ void ServerImpl::OnRun() {
 
             else
             {
-                std::cout <<"Emplace called "<< client_socket <<" " << threads.size() <<" " << max_threads << std::endl;
+                //std::cout <<"Emplace called "<< client_socket <<" " << threads.size() <<" " << max_threads << std::endl;
               // std::map<int, std::thread>::iterator
 
                 threads.emplace_back(std::thread(&ServerImpl::ThreadFunction, this, client_socket));
 
-                std::cout <<"Emplace finished" <<" " << client_socket <<" " << threads.size() <<" " << max_threads << std::endl;
+                //std::cout <<"Emplace finished" <<" " << client_socket <<" " << threads.size() <<" " << max_threads << std::endl;
             }
         }
 
@@ -175,7 +175,7 @@ void ServerImpl::OnRun() {
 void ServerImpl::ThreadFunction(int client_socket)
 {
   //template copied from storage/st_blocking/ServerImpl.cpp
-  std::cout << "Entered thread" << client_socket <<std::endl;
+  //std::cout << "Entered thread" << client_socket <<std::endl;
   std::size_t arg_remains;
   Protocol::Parser parser;
   std::string argument_for_command;
@@ -277,7 +277,7 @@ void ServerImpl::ThreadFunction(int client_socket)
      std::lock_guard<std::mutex> lck(threads_mutex);
 
 
-     std::cout << "destroying thread" << client_socket <<std::endl;
+     //std::cout << "destroying thread" << client_socket <<std::endl;
 
      //now we are able to destroy this_thread's descriptor
 
