@@ -132,13 +132,19 @@ bool SimpleLRU::Replace(lru_node &orig, const std::string &value)
 		}
 		return false;
 */
-		DecreaseSizeIfNeeded(orig.value.size(), value.size());
-		_current_size += value.size();
-		_current_size -= orig.value.size();
+	if(	_current_size + value.size() - orig.value.size() <= _max_size)
+	{
+			bool ms = MoveLast(orig);
+			if(_lru_head->next.get() !=_lru_tail)
+					DecreaseSizeIfNeeded(orig.value.size(), value.size());
+			_current_size += value.size();
+			_current_size -= orig.value.size();
 
-		orig.value = value;
+			orig.value = value;
+			return ms;
+	}
 
-		return MoveLast(orig);
+		return false;
 
 
 }
