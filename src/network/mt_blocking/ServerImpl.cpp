@@ -148,13 +148,22 @@ void ServerImpl::OnRun() {
         {
 
             std::lock_guard<std::mutex> lck(threads_mutex);
+
             if (threads.size() >= max_threads)
             {
                 close(client_socket);
-                continue;
+                //continue;
             }
 
-            threads.insert(std::pair<int, std::thread>(client_socket, std::thread(&ServerImpl::ThreadFunction, this, client_socket)));
+            else
+            {
+                std::cout <<"Emplace called "<< client_socket <<" " << threads.size() <<" " << max_threads << std::endl;
+              // std::map<int, std::thread>::iterator
+
+                threads.emplace_back(std::thread(&ServerImpl::ThreadFunction, this, client_socket));
+
+                std::cout <<"Emplace finished" <<" " << client_socket <<" " << threads.size() <<" " << max_threads << std::endl;
+            }
         }
 
     }
@@ -166,6 +175,7 @@ void ServerImpl::OnRun() {
 void ServerImpl::ThreadFunction(int client_socket)
 {
   //template copied from storage/st_blocking/ServerImpl.cpp
+  std::cout << "Entered thread" << client_socket <<std::endl;
   std::size_t arg_remains;
   Protocol::Parser parser;
   std::string argument_for_command;
@@ -265,15 +275,31 @@ void ServerImpl::ThreadFunction(int client_socket)
   //setting that thread finished
   {
      std::lock_guard<std::mutex> lck(threads_mutex);
-     auto this_thread = threads.find(client_socket);
-     this_thread->second.detach();
+
+
+     std::cout << "destroying thread" << client_socket <<std::endl;
+
      //now we are able to destroy this_thread's descriptor
-     threads.erase(this_thread);
-     if (threads.size() == 0)
+
+
+     for (auto &i : threads)
      {
-       allWorkersFinished.notify_all();
+
+         if (i.get_id() == std::this_thread::get_id())
+          {
+             i.swap(threads.back());
+             threads.back().detach();
+             threads.pop_back();
+             //  ex->threads.erase(&i);
+
+             if (threads.size() == 0)
+             {
+
+                 allWorkersFinished.notify_all();
+             }
+         }
      }
-  }
+   }
 }
 
 } // namespace MTblocking

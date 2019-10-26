@@ -55,7 +55,8 @@ private:
     // Thread to run network on
     std::thread _thread;
     void ThreadFunction(int client_socket) ;
-    std::map<int, std::thread> threads;
+    //std::map<int, std::thread> threads;
+    std::vector<std::thread> threads;
     mutable std::mutex threads_mutex;
     size_t max_threads;
     std::condition_variable allWorkersFinished;
