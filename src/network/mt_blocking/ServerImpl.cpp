@@ -37,7 +37,7 @@ ServerImpl::~ServerImpl() {}
 void ServerImpl::Start(uint16_t port, uint32_t n_accept, uint32_t n_workers) {
     _logger = pLogging->select("network");
     _logger->info("Start mt_blocking network service");
-
+    std::cout << "start mt_blocking" <<std::endl;
     sigset_t sig_mask;
     sigemptyset(&sig_mask);
     sigaddset(&sig_mask, SIGPIPE);
@@ -80,6 +80,14 @@ void ServerImpl::Start(uint16_t port, uint32_t n_accept, uint32_t n_workers) {
 void ServerImpl::Stop() {
     running.store(false);
     shutdown(_server_socket, SHUT_RDWR);
+
+    {
+      std::lock_guard<std::mutex> lock(threads_mutex);
+      for (auto &t : threads)
+      {
+        shutdown(t.second, SHUT_RD);
+      }
+    }
 }
 
 // See Server.h
@@ -88,14 +96,14 @@ void ServerImpl::Join()
    //wait for all threads to finish
     {
         std::unique_lock<std::mutex> lock(threads_mutex);
-        while (threads.size() > 0)
+        while (threads.size() > 0 &&  running.load())
         {
             allWorkersFinished.wait(lock);
         }
     }
     assert(_thread.joinable());
     _thread.join();
-    close(_server_socket);
+
 
 }
 
@@ -147,7 +155,7 @@ void ServerImpl::OnRun() {
 
             std::lock_guard<std::mutex> lck(threads_mutex);
 
-            if (threads.size() >= max_threads)
+            if (threads.size() >= max_threads || !running.load())
             {
                 close(client_socket);
                 //continue;
@@ -158,7 +166,7 @@ void ServerImpl::OnRun() {
                 //std::cout <<"Emplace called "<< client_socket <<" " << threads.size() <<" " << max_threads << std::endl;
               // std::map<int, std::thread>::iterator
 
-                threads.emplace_back(std::thread(&ServerImpl::ThreadFunction, this, client_socket));
+                threads.emplace_back(std::make_pair(std::thread(&ServerImpl::ThreadFunction, this, client_socket), client_socket));
 
                 //std::cout <<"Emplace finished" <<" " << client_socket <<" " << threads.size() <<" " << max_threads << std::endl;
             }
@@ -167,6 +175,7 @@ void ServerImpl::OnRun() {
     }
 
     // Cleanup on exit...
+    close(_server_socket);
     _logger->warn("Network stopped");
 }
 
@@ -280,17 +289,18 @@ void ServerImpl::ThreadFunction(int client_socket)
      //now we are able to destroy this_thread's descriptor
 
 
-     for (auto &i : threads)
+     for (auto &t : threads)
      {
 
-         if (i.get_id() == std::this_thread::get_id())
+
+         if (t.first.get_id() == std::this_thread::get_id())
           {
-             i.swap(threads.back());
-             threads.back().detach();
+             t.swap(threads.back());
+             threads.back().first.detach();
              threads.pop_back();
              //  ex->threads.erase(&i);
 
-             if (threads.size() == 0)
+             if (threads.size() == 0 && !running.load())
              {
 
                  allWorkersFinished.notify_all();
