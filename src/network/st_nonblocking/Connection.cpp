@@ -140,7 +140,7 @@ void Connection::DoRead()
       }
 
       if (readed_bytes == 0) {
-          _logger->debug("Connection closed");
+          _logger->debug("End of read session");
       } else {
           throw std::runtime_error(std::string(strerror(errno)));
       }
