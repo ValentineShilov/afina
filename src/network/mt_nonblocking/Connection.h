@@ -17,7 +17,7 @@
 namespace Afina {
 namespace Network {
 namespace MTnonblock {
-class ServerImpl;
+
 class Connection {
 public:
     Connection(int s, std::shared_ptr<Afina::Storage> ps) : _socket(s), pStorage(ps)
@@ -46,7 +46,7 @@ protected:
 private:
 
     friend class ServerImpl;
-
+    friend class Worker;
     int _socket;
     struct epoll_event _event;
     bool _isAlive;
