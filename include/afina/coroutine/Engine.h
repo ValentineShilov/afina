@@ -65,6 +65,7 @@ protected:
      */
     void Store(context &ctx);
 
+    void Switch(context &ctx);
     /**
      * Restore stack of the given context and pass control to coroutinne
      */
