@@ -12,15 +12,14 @@ namespace Coroutine {
 void Engine::Store(context &ctx)
 {
   char v(0);
-  {
+//  {
     //high addr StackBottom
     //
     //
-    //low addr  s_end
+    //low addr  v
 
-    char *s_end = &v;
     ctx.Hight = StackBottom;
-    ctx.Low = s_end;
+    ctx.Low = &v;
 
 
     uint32_t &old_size = std::get<1>(ctx.Stack);
@@ -36,13 +35,13 @@ void Engine::Store(context &ctx)
     }
 
     memcpy(buffer, ctx.Low, new_size);
-  }
+//  }
 }
 void Engine::Restore(context &ctx)
 {
-    char v(0);
+    char s_end[2];
     {
-      char *s_end = &v;
+
       if (s_end >= ctx.Low && s_end <= ctx.Hight)
       {
           Restore(ctx);
@@ -84,6 +83,29 @@ void Engine::sched(void *routine)
   {
     Switch(*(reinterpret_cast<context *>(routine)));
   }
+
+}
+
+
+void Engine::Switch(context& ctx)
+{
+    if(cur_routine && cur_routine != idle_ctx)
+    {
+        if (setjmp(cur_routine->Environment) > 0)
+        {
+            //we successfully switched to another coroutine
+            //and then returned to this coroutine
+        }
+        else
+        {
+          //save state
+          Store(*cur_routine);
+          //change curerent pointer and enter ctx
+          cur_routine = &ctx;
+          Restore(ctx);
+        }
+
+    }
 
 }
 
