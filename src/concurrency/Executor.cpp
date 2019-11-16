@@ -1,6 +1,6 @@
 #include <afina/concurrency/Executor.h>
 #include <algorithm>
-//#include <iostream>
+#include <iostream>
 
 // to fix linking of this file added concurrency to Network/CMakelist.txt
 
@@ -9,8 +9,10 @@ namespace Concurrency {
 void Executor::Start() {
     if (state == State::kStopped) {
         for (size_t i = 0; i < low_watermark; ++i) {
-
-            threads.emplace_back(&(perform), this);
+          std::thread t(&(perform), this);
+          //threads[t.get_id()]=(std::move(t));
+          auto id = t.get_id();
+          threads.insert(std::move(std::make_pair(id, std::move(t))));
         }
     }
     state = State::kRun;
@@ -27,6 +29,7 @@ void Executor::Stop(bool await) {
 }
 void perform(Afina::Concurrency::Executor *ex) {
     std::function<void()> task;
+    std::cout << "Thread created " << std::this_thread::get_id() <<std::endl;
     bool haveTask(false);
     while (ex->state == Executor::State::kRun)
     {
@@ -38,6 +41,7 @@ void perform(Afina::Concurrency::Executor *ex) {
                 if (ex->threads.size() > ex->low_watermark)
                 {
                    //no tasks and too many workers => exit
+                    std::cout << "no tasks and too many workers => exit " << std::this_thread::get_id() <<" " << ex->nfree <<std::endl;
                     ex->nfree--;
                     haveTask=false;
                     break;
@@ -46,6 +50,8 @@ void perform(Afina::Concurrency::Executor *ex) {
                 {
                       //no tasks, but low_watermark reached =>
                       //wait until timeout again
+                      std::cout << "wait until timeout again " << std::this_thread::get_id() <<" " <<ex->nfree <<std::endl;
+
                       haveTask=false;
                 }
             }
@@ -53,11 +59,14 @@ void perform(Afina::Concurrency::Executor *ex) {
             {
               //have task
               haveTask=true;
+              std::cout << "have task " << std::this_thread::get_id() <<" " <<ex->nfree <<std::endl;
               task = (ex->tasks.front());
               ex->tasks.pop_front();
-              ex->nfree--;
+
             }
+            ex->nfree--;
         }
+
         if(haveTask)
         {
           task();
@@ -68,18 +77,22 @@ void perform(Afina::Concurrency::Executor *ex) {
     {
         std::unique_lock<std::mutex> lock(ex->mutex);
         // ex->nthreads--;
-        for (auto &i : ex->threads) {
-            if (i.get_id() == std::this_thread::get_id()) {
-                i.detach();
-                i.swap(ex->threads.back());
-                ex->threads.pop_back();
-                //  ex->threads.erase(&i);
-                if (ex->threads.size() == 0) {
-                    ex->stop_cv.notify_all();
-                }
-                break;
-            }
+
+        auto it(ex->threads.find(std::this_thread::get_id())) ;
+        if(it != ex->threads.end())
+        {
+          // found
+          auto &i(it->second);
+          i.detach();
+          ex->threads.erase(it);
+          //  ex->threads.erase(&i);
+          if (ex->threads.size() == 0)
+          {
+              ex->stop_cv.notify_all();
+          }
+
         }
+
     }
 }
 
