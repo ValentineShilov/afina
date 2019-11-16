@@ -1,6 +1,6 @@
 #include <afina/concurrency/Executor.h>
 #include <algorithm>
-#include <iostream>
+//#include <iostream>
 
 // to fix linking of this file added concurrency to Network/CMakelist.txt
 
@@ -29,7 +29,7 @@ void Executor::Stop(bool await) {
 }
 void perform(Afina::Concurrency::Executor *ex) {
     std::function<void()> task;
-    std::cout << "Thread created " << std::this_thread::get_id() <<std::endl;
+    //std::cout << "Thread created " << std::this_thread::get_id() <<std::endl;
     bool haveTask(false);
     while (ex->state == Executor::State::kRun)
     {
@@ -41,7 +41,7 @@ void perform(Afina::Concurrency::Executor *ex) {
                 if (ex->threads.size() > ex->low_watermark)
                 {
                    //no tasks and too many workers => exit
-                    std::cout << "no tasks and too many workers => exit " << std::this_thread::get_id() <<" " << ex->nfree <<std::endl;
+                    //std::cout << "no tasks and too many workers => exit " << std::this_thread::get_id() <<" " << ex->nfree <<std::endl;
                     ex->nfree--;
                     haveTask=false;
                     break;
@@ -50,7 +50,7 @@ void perform(Afina::Concurrency::Executor *ex) {
                 {
                       //no tasks, but low_watermark reached =>
                       //wait until timeout again
-                      std::cout << "wait until timeout again " << std::this_thread::get_id() <<" " <<ex->nfree <<std::endl;
+                      //std::cout << "wait until timeout again " << std::this_thread::get_id() <<" " <<ex->nfree <<std::endl;
 
                       haveTask=false;
                 }
@@ -59,7 +59,7 @@ void perform(Afina::Concurrency::Executor *ex) {
             {
               //have task
               haveTask=true;
-              std::cout << "have task " << std::this_thread::get_id() <<" " <<ex->nfree <<std::endl;
+              //std::cout << "have task " << std::this_thread::get_id() <<" " <<ex->nfree <<std::endl;
               task = (ex->tasks.front());
               ex->tasks.pop_front();
 
