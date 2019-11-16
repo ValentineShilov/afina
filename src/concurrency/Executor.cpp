@@ -25,7 +25,7 @@ void Executor::Stop(bool await) {
     if (await) {
         stop_cv.wait(lock, [&]() { return threads.size() == 0; });
     }
-    state = State::kStopped;
+
 }
 void perform(Afina::Concurrency::Executor *ex) {
     std::function<void()> task;
@@ -88,7 +88,9 @@ void perform(Afina::Concurrency::Executor *ex) {
           //  ex->threads.erase(&i);
           if (ex->threads.size() == 0)
           {
+              ex->state = Executor::State::kStopped;
               ex->stop_cv.notify_all();
+
           }
 
         }
