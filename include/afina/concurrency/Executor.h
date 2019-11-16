@@ -120,7 +120,7 @@ private:
     bool Execute(F &&func, Types... args)
     {
       // Prepare "task"
-    
+
       auto exec = std::bind(std::forward<F>(func), std::forward<Types>(args)...);
 
       std::unique_lock<std::mutex> lock(this->mutex);

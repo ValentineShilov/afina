@@ -27,23 +27,42 @@ void Executor::Stop(bool await) {
 }
 void perform(Afina::Concurrency::Executor *ex) {
     std::function<void()> task;
-    while (ex->state == Executor::State::kRun) {
+    bool haveTask(false);
+    while (ex->state == Executor::State::kRun)
+    {
         {
             std::unique_lock<std::mutex> lock(ex->mutex);
             ex->nfree++;
             auto time = std::chrono::system_clock::now() + std::chrono::milliseconds(ex->idle_time);
             if (!ex->empty_condition.wait_until(lock, time, [&]() { return ex->tasks.size() != 0; })) {
-                ex->nfree--;
                 if (ex->threads.size() > ex->low_watermark)
+                {
+                   //no tasks and too many workers => exit
+                    ex->nfree--;
+                    haveTask=false;
                     break;
+                }
+                else
+                {
+                      //no tasks, but low_watermark reached =>
+                      //wait until timeout again
+                      haveTask=false;
+                }
             }
-
-            task = (ex->tasks.front());
-            ex->tasks.pop_front();
-            ex->nfree--;
+            else
+            {
+              //have task
+              haveTask=true;
+              task = (ex->tasks.front());
+              ex->tasks.pop_front();
+              ex->nfree--;
+            }
         }
-
-        task();
+        if(haveTask)
+        {
+          task();
+          haveTask=false;
+        }
     }
 
     {
