@@ -100,9 +100,7 @@ void ServerImpl::Join() {
     assert(_thread.joinable());
     _thread.join();
     close(_server_socket);
-    assert(_thread.joinable());
-    _thread.join();
-    close(_server_socket);
+  
 }
 
 // See Server.h
