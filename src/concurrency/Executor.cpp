@@ -90,7 +90,11 @@ void perform(Afina::Concurrency::Executor *ex) {
           {
               ex->state = Executor::State::kStopped;
               ex->stop_cv.notify_all();
+<<<<<<< HEAD
 
+=======
+              ex->state = Executor::State::kStopped;
+>>>>>>> 6421d1e44dc9877ef9808062d326318d5ad50ce1
           }
 
         }
