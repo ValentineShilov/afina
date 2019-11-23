@@ -6,7 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
-#include <string> 
+#include <string>
 #include <thread>
 #include <map>
 //#include <iostream>
@@ -22,7 +22,7 @@ class Executor
 {
 
 public:
-  Executor(std::string name, size_t hight_watermark=10, size_t max_queue_size = 1000, size_t low_watermark = 1, size_t  idle_time=400) : low_watermark(low_watermark), hight_watermark(hight_watermark), max_queue_size(max_queue_size), idle_time(idle_time), nfree(0)
+  Executor(std::string name, size_t hight_watermark=10, size_t max_queue_size = 1000, size_t low_watermark = 1, size_t  idle_time=400) : low_watermark(low_watermark), hight_watermark(hight_watermark), max_queue_size(max_queue_size), idle_time(idle_time), nfree(0), nthreads(0)
   {
     //state=kRun;
     state = State::kStopped;
@@ -45,9 +45,9 @@ public:
     ~Executor()
     {
       std::unique_lock<std::mutex> lock(mutex);
-      if(state==State::kRun)
+      if(state == State::kRun)
       {
-        Stop(false);
+        Stop(true);
       }
 
     }
@@ -114,6 +114,7 @@ private:
     size_t max_queue_size;
     size_t idle_time;
     size_t nfree;
+    size_t nthreads;
   //  size_t nthreads;
 
   public:
@@ -136,7 +137,7 @@ private:
       {
         return false;
       }
-      if(nfree==0 && threads.size()<hight_watermark)
+      if(nfree==0 && threads.size() < hight_watermark)
       {
 
         //threads.emplace_back(&perform, this);

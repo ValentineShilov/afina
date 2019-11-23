@@ -7,7 +7,9 @@
 namespace Afina {
 namespace Concurrency {
 void Executor::Start() {
+    std::unique_lock<std::mutex> lock(mutex);
     if (state == State::kStopped) {
+        state = State::kRun;
         for (size_t i = 0; i < low_watermark; ++i) {
           std::thread t(&(perform), this);
           //threads[t.get_id()]=(std::move(t));
@@ -15,15 +17,22 @@ void Executor::Start() {
           threads.insert(std::move(std::make_pair(id, std::move(t))));
         }
     }
-    state = State::kRun;
+
 }
 
 void Executor::Stop(bool await) {
     std::unique_lock<std::mutex> lock(mutex);
-    state = State::kStopping;
+    if(state==State::kRun)
+    {
+      state = State::kStopping;
 
-    if (await) {
-        stop_cv.wait(lock, [&]() { return threads.size() == 0; });
+      if (await && threads.size()>0) {
+          stop_cv.wait(lock, [&]() { return threads.size() == 0; });
+      }
+      else
+      {
+        state = State::kStopped;
+      }
     }
 
 }
@@ -86,15 +95,11 @@ void perform(Afina::Concurrency::Executor *ex) {
           i.detach();
           ex->threads.erase(it);
           //  ex->threads.erase(&i);
-          if (ex->threads.size() == 0)
+          if (ex->threads.size() == 0 && ex->state == Executor::State::kStopping)
           {
               ex->state = Executor::State::kStopped;
               ex->stop_cv.notify_all();
-<<<<<<< HEAD
 
-=======
-              ex->state = Executor::State::kStopped;
->>>>>>> 6421d1e44dc9877ef9808062d326318d5ad50ce1
           }
 
         }
