@@ -98,7 +98,7 @@ private:
      * Vector of actual threads that perorm execution
      */
     //std::vector<std::thread> threads;
-    std::map<std::thread::id, std::thread> threads;
+    //std::map<std::thread::id, std::thread> threads;
     /**
      * Task queue
      */
@@ -137,14 +137,14 @@ private:
       {
         return false;
       }
-      if(nfree==0 && threads.size() < hight_watermark)
+      if(nfree==0 && nthreads < hight_watermark)
       {
 
         //threads.emplace_back(&perform, this);
         std::thread t(&(perform), this);
-        //threads[t.get_id()]=(std::move(t));
-        auto id = t.get_id();
-        threads.insert(std::move(std::make_pair(id, std::move(t))));
+        t.detach();
+
+        nthreads++;
 
       }
       tasks.push_back(exec);

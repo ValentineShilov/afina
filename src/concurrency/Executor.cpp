@@ -12,9 +12,9 @@ void Executor::Start() {
         state = State::kRun;
         for (size_t i = 0; i < low_watermark; ++i) {
           std::thread t(&(perform), this);
-          //threads[t.get_id()]=(std::move(t));
-          auto id = t.get_id();
-          threads.insert(std::move(std::make_pair(id, std::move(t))));
+          t.detach();
+
+          nthreads++;
         }
     }
 
@@ -26,8 +26,8 @@ void Executor::Stop(bool await) {
     {
       state = State::kStopping;
 
-      if (await && threads.size()>0) {
-          stop_cv.wait(lock, [&]() { return threads.size() == 0; });
+      if (await && nthreads>0) {
+          stop_cv.wait(lock, [&]() { return nthreads == 0; });
       }
       else
       {
@@ -47,7 +47,7 @@ void perform(Afina::Concurrency::Executor *ex) {
             ex->nfree++;
             auto time = std::chrono::system_clock::now() + std::chrono::milliseconds(ex->idle_time);
             if (!ex->empty_condition.wait_until(lock, time, [&]() { return ex->tasks.size() != 0; })) {
-                if (ex->threads.size() > ex->low_watermark)
+                if (ex->nthreads > ex->low_watermark)
                 {
                    //no tasks and too many workers => exit
                     //std::cout << "no tasks and too many workers => exit " << std::this_thread::get_id() <<" " << ex->nfree <<std::endl;
@@ -87,15 +87,13 @@ void perform(Afina::Concurrency::Executor *ex) {
         std::unique_lock<std::mutex> lock(ex->mutex);
         // ex->nthreads--;
 
-        auto it(ex->threads.find(std::this_thread::get_id())) ;
-        if(it != ex->threads.end())
+
         {
           // found
-          auto &i(it->second);
-          i.detach();
-          ex->threads.erase(it);
+
+          ex->nthreads--;
           //  ex->threads.erase(&i);
-          if (ex->threads.size() == 0 && ex->state == Executor::State::kStopping)
+          if (ex->nthreads == 0 && ex->state == Executor::State::kStopping)
           {
               ex->state = Executor::State::kStopped;
               ex->stop_cv.notify_all();
