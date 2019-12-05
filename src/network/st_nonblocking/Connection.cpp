@@ -113,7 +113,8 @@ void Connection::DoRead() {
                     // add response to results queue
                     _results.push_back(result);
                     // set socket to read-write
-                    _event.events = rw_mask;
+                    if(_event.events!= rw_mask)
+                        _event.events = rw_mask;
 
                     // Prepare for the next command
                     command_to_execute.reset();
@@ -125,9 +126,7 @@ void Connection::DoRead() {
 
         if (readed_bytes == 0) {
             _logger->debug("End of read session");
-        } else {
-            //throw std::runtime_error(std::string(strerror(errno)));
-        }
+        } 
     } catch (std::runtime_error &ex) {
         _logger->error("Failed to process connection on descriptor {}: {}", client_socket, ex.what());
     }
@@ -153,12 +152,14 @@ void Connection::DoWrite() {
     _first_offset += bw;
 
     size_t wcnt = 0;
-    while (wcnt < _results.size() && (_first_offset - iovecs[wcnt].iov_len) >= 0) {
+    auto it = _results.begin();
+    while (wcnt < _results.size() && (_first_offset  >= iovecs[wcnt].iov_len)) {
         _first_offset -= iovecs[wcnt].iov_len;
         ++wcnt;
+        ++it;
     }
 
-    _results.erase(_results.begin(), _results.begin() + wcnt);
+    _results.erase(_results.begin(), it);
     if (_results.empty()) {
         _event.events = r_mask;
     }
