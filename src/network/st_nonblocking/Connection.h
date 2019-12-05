@@ -18,16 +18,14 @@ namespace STnonblock {
 
 class Connection {
 public:
-    Connection(int s, std::shared_ptr<Afina::Storage> ps) : _socket(s), pStorage(ps)
-    {
+    Connection(int s, std::shared_ptr<Afina::Storage> ps) : _socket(s), pStorage(ps) {
         std::memset(&_event, 0, sizeof(struct epoll_event));
         _event.data.ptr = this;
         //_event.events = r_mask;
-        _first_offset=0;
+        _first_offset = 0;
         readed_bytes = 0;
         arg_remains = 0;
         command_to_execute = 0;
-
     }
 
     inline bool isAlive() const { return true; }
@@ -52,7 +50,7 @@ private:
     static const int rw_mask = EPOLLIN | EPOLLRDHUP | EPOLLOUT;
     std::shared_ptr<Afina::Storage> pStorage;
 
-    //reader and executor state
+    // reader and executor state
     int readed_bytes;
     std::unique_ptr<Execute::Command> command_to_execute;
     std::deque<std::string> _results;
@@ -61,9 +59,8 @@ private:
     char client_buffer[4096];
     std::string argument_for_command;
 
-    //writer state
+    // writer state
     int _first_offset;
-
 };
 
 } // namespace STnonblock
