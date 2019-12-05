@@ -26,8 +26,6 @@ void Connection::Start(std::shared_ptr<spdlog::logger> logger) {
 
     _logger = logger;
     _event.events = r_mask;
-
-    _event.data.fd = _socket;
     _event.data.ptr = this;
 }
 
@@ -128,7 +126,7 @@ void Connection::DoRead() {
         if (readed_bytes == 0) {
             _logger->debug("End of read session");
         } else {
-            throw std::runtime_error(std::string(strerror(errno)));
+            //throw std::runtime_error(std::string(strerror(errno)));
         }
     } catch (std::runtime_error &ex) {
         _logger->error("Failed to process connection on descriptor {}: {}", client_socket, ex.what());
