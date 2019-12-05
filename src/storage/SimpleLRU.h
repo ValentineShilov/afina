@@ -93,14 +93,15 @@ private:
     std::unique_ptr<lru_node> _lru_head;
     lru_node * _lru_tail; //tail node
 
-    // Index of nodes from list above 
+    // Index of nodes from list above
     std::map<std::reference_wrapper<const std::string>, std::reference_wrapper<lru_node>, std::less<std::string>> _lru_index;
+
+private:
+    //internal helper methods
     bool Insert(const std::string &key, const std::string &value);
     bool Replace(lru_node &orig, const std::string &value);
     bool Delete(lru_node &delete_node);
-
     bool DecreaseSizeIfNeeded(size_t oldNodeSize, size_t newNodeSize);
-
     bool MoveLast(lru_node &node);
     bool DeleteFirst();
 };
