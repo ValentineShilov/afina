@@ -161,6 +161,7 @@ void ServerImpl::OnRun() {
     }
 
     // Cleanup on exit...
+     close(_server_socket);
     _logger->warn("Network stopped");
 }
 
