@@ -139,7 +139,7 @@ void Connection::DoWrite() {
     size_t i = 0;
     for (auto &res : _results) {
         iovecs[i].iov_len = res.size();
-        iovecs[i].iov_base = reinterpret_cast<void *>(const_cast<char *>(res.c_str()));
+        iovecs[i].iov_base = reinterpret_cast<void *>(const_cast<uint8_t *>(res.c_str()));
         ++i;
     }
     iovecs[0].iov_base = reinterpret_cast<void *>(reinterpret_cast<uint8_t *>(iovecs[0].iov_base) + _first_offset);
