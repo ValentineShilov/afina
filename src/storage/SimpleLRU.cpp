@@ -44,11 +44,13 @@ bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value)
 
 bool SimpleLRU::Set(const std::string &key, const std::string &value)
 {
-  if( (value.size() + key.size() ) > _max_size)
+  if((key.length() == 0) || ((value.size() + key.size() ) > _max_size) )
 	{
     return false;
 	}
-	if(_lru_index.find(key) != _lru_index.end())
+	auto it = _lru_index.find(std::reference_wrapper<const std::string>(key));
+
+	if( it != _lru_index.end())
 	{
 		return Replace(it->second, value);
 	}
