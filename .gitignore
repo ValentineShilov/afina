@@ -10,5 +10,6 @@ config/_local.conf
 
 # cquery
 .vscode
+.ccls-cache
 compile_commands.json
 cquery_log.txt
