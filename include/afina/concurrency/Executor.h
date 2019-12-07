@@ -3,19 +3,33 @@
 
 #include <condition_variable>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <string>
 #include <thread>
-
+//#include <iostream>
 namespace Afina {
 namespace Concurrency {
 
+class Executor;
+void perform(Afina::Concurrency::Executor *);
 /**
  * # Thread pool
  */
 class Executor {
+
+public:
+    Executor(std::string name, size_t hight_watermark = 10, size_t max_queue_size = 1000, size_t low_watermark = 1,
+             size_t idle_time = 400)
+        : low_watermark(low_watermark), hight_watermark(hight_watermark), max_queue_size(max_queue_size),
+          idle_time(idle_time), nfree(0), nthreads(0) {
+        // state=kRun;
+        state = State::kStopped;
+    };
+    friend void perform(Executor *ex);
+
     enum class State {
         // Threadpool is fully operational, tasks could be added and get executed
         kRun,
@@ -28,8 +42,12 @@ class Executor {
         kStopped
     };
 
-    Executor(std::string name, int size);
-    ~Executor();
+    ~Executor() {
+        std::unique_lock<std::mutex> lock(mutex);
+        if (state == State::kRun) {
+            Stop(true);
+        }
+    }
 
     /**
      * Signal thread pool to stop, it will stop accepting new jobs and close threads just after each become
@@ -37,6 +55,9 @@ class Executor {
      *
      * In case if await flag is true, call won't return until all background jobs are done and all threads are stopped
      */
+
+    void Start();
+
     void Stop(bool await = false);
 
     /**
@@ -46,20 +67,6 @@ class Executor {
      * That function doesn't wait for function result. Function could always be written in a way to notify caller about
      * execution finished by itself
      */
-    template <typename F, typename... Types> bool Execute(F &&func, Types... args) {
-        // Prepare "task"
-        auto exec = std::bind(std::forward<F>(func), std::forward<Types>(args)...);
-
-        std::unique_lock<std::mutex> lock(this->mutex);
-        if (state != State::kRun) {
-            return false;
-        }
-
-        // Enqueue new task
-        tasks.push_back(exec);
-        empty_condition.notify_one();
-        return true;
-    }
 
 private:
     // No copy/move/assign allowed
@@ -71,7 +78,6 @@ private:
     /**
      * Main function that all pool threads are running. It polls internal task queue and execute tasks
      */
-    friend void perform(Executor *executor);
 
     /**
      * Mutex to protect state below from concurrent modification
@@ -82,12 +88,12 @@ private:
      * Conditional variable to await new data in case of empty queue
      */
     std::condition_variable empty_condition;
-
+    std::condition_variable stop_cv;
     /**
      * Vector of actual threads that perorm execution
      */
-    std::vector<std::thread> threads;
-
+    // std::vector<std::thread> threads;
+    // std::map<std::thread::id, std::thread> threads;
     /**
      * Task queue
      */
@@ -97,7 +103,46 @@ private:
      * Flag to stop bg threads
      */
     State state;
-};
+
+    size_t low_watermark;
+    size_t hight_watermark;
+    size_t max_queue_size;
+    size_t idle_time;
+    size_t nfree;
+    size_t nthreads;
+    //  size_t nthreads;
+
+public:
+    template <typename F, typename... Types> bool Execute(F &&func, Types... args) {
+        // Prepare "task"
+
+        auto exec = std::bind(std::forward<F>(func), std::forward<Types>(args)...);
+
+        std::unique_lock<std::mutex> lock(this->mutex);
+        if (state != State::kRun) {
+
+            return false;
+        }
+
+        // Enqueue new task
+        if (tasks.size() >= max_queue_size) {
+            return false;
+        }
+        if (nfree == 0 && nthreads < hight_watermark) {
+
+            // threads.emplace_back(&perform, this);
+            std::thread t(&(perform), this);
+            t.detach();
+
+            nthreads++;
+        }
+        tasks.push_back(exec);
+
+        empty_condition.notify_one();
+        return true;
+    }
+
+}; // executor
 
 } // namespace Concurrency
 } // namespace Afina
