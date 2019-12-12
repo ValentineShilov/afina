@@ -6,7 +6,15 @@
 #include <iostream>
 namespace Afina {
 namespace Coroutine {
-
+void exchangeHighLow(char *&high, char *&low)
+{
+  auto a=low;
+  if(high<low)
+  {
+    low = high;
+    high = a;
+  }
+}
 
 ATTRIBUTE_NO_SANITIZE_ADDRESS
 void Engine::Store(context &ctx)
@@ -20,8 +28,8 @@ void Engine::Store(context &ctx)
 
     ctx.Hight = StackBottom;
     ctx.Low = s_end;
-
-    std::cout <<"store:" <<  (int64_t)ctx.Hight <<" " <<(int64_t)ctx.Low   <<std::endl;
+    exchangeHighLow(ctx.Hight, ctx.Low);
+    //std::cout <<"store:" <<  (int64_t)ctx.Hight <<" " <<(int64_t)ctx.Low   <<std::endl;
     uint32_t &old_size = std::get<1>(ctx.Stack);
     char * &buffer = std::get<0>(ctx.Stack);
     auto new_size = ctx.Hight - ctx.Low;
@@ -44,10 +52,10 @@ void Engine::Restore(context &ctx)
 
     char s_end[1];
     {
-      std::cout <<"REstore:" << (uint64_t)s_end <<std::endl;
-      if (s_end >= ctx.Low)
+      //std::cout <<"REstore:" << (uint64_t)s_end <<std::endl;
+      if (s_end >= ctx.Low && s_end< ctx.Hight)
       {
-          std::cout <<"Restore recursive call:" << (uint64_t)ctx.Hight <<std::endl;
+          //std::cout <<"Restore recursive call:" << (uint64_t)ctx.Hight <<std::endl;
           Restore(ctx);
       }
       size_t size = ctx.Hight - ctx.Low;
@@ -61,7 +69,7 @@ void Engine::Restore(context &ctx)
 ATTRIBUTE_NO_SANITIZE_ADDRESS
 void Engine::yield()
 {
-  std::cout <<"Yield:" <<(uint64_t)cur_routine <<std::endl;
+  //std::cout <<"Yield:" <<(uint64_t)cur_routine <<std::endl;
   auto c = alive;
   if(cur_routine!=nullptr)
   {
@@ -82,7 +90,7 @@ void Engine::yield()
 ATTRIBUTE_NO_SANITIZE_ADDRESS
 void Engine::sched(void *routine)
 {
-  std::cout <<"Sched:" <<(uint64_t)cur_routine <<" "  <<(uint64_t)routine <<std::endl;
+  //std::cout <<"Sched:" <<(uint64_t)cur_routine <<" "  <<(uint64_t)routine <<std::endl;
   if (cur_routine == routine)
   {
     return;
@@ -102,7 +110,7 @@ void Engine::sched(void *routine)
 ATTRIBUTE_NO_SANITIZE_ADDRESS
 void Engine::Switch(context& ctx)
 {
-    std::cout <<"Sched:" <<(uint64_t)cur_routine <<" "  <<(uint64_t)&ctx <<std::endl;
+    //std::cout <<"Sched:" <<(uint64_t)cur_routine <<" "  <<(uint64_t)&ctx <<std::endl;
     if(cur_routine && cur_routine != idle_ctx)
     {
         if (setjmp(cur_routine->Environment) > 0)
