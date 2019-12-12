@@ -26,15 +26,10 @@ namespace MTnonblock {
 void Connection::Start(std::shared_ptr<spdlog::logger> logger)
 {
   std::lock_guard<std::mutex> lock(mutex);
-//   std::cout << "Start" << std::endl;
+
    _logger = logger;
    _event.events = r_mask;
-   //_event.events= EPOLLIN | EPOLLPRI | EPOLLRDHUP;
-   _event.data.fd = _socket;
    _event.data.ptr = this;
-
-
-
 }
 
 // See Connection.h
@@ -62,7 +57,7 @@ void Connection::DoRead()
   //from st_blocking
   try {
       int readed_bytes_ci = 0;
-      char client_buffer[4096];
+
       while ((readed_bytes_ci = read(client_socket, client_buffer + readed_bytes, sizeof(client_buffer) - readed_bytes)) > 0) {
           _logger->debug("Got {} bytes from socket", readed_bytes);
           readed_bytes += readed_bytes_ci;
@@ -125,13 +120,14 @@ void Connection::DoRead()
 
 
                    command_to_execute->Execute(*pStorage, argument_for_command, result);
-                   result += "\n";
-
+                   result += "\r\n";
+                   bool flag = _results.empty();
                    //add response to results queue
                    _results.push_back(result);
                    //set socket to read-write
-                   _event.events = rw_mask;
-
+                   if(flag){
+                     _event.events = rw_mask;
+                   }
                    // Prepare for the next command
                    command_to_execute.reset();
                    argument_for_command.resize(0);
@@ -178,20 +174,24 @@ void Connection::DoWrite()
   ssize_t bw;
   if ((bw = writev(_socket, iovecs, _results.size())) <= 0) {
       _logger->error("Failed to send response");
+      return;
   }
   _first_offset += bw;
 
-  size_t wcnt = 0;
-  while(wcnt < _results.size() && (_first_offset - iovecs[wcnt].iov_len) >= 0) {
-      _first_offset -= iovecs[wcnt].iov_len;
-      ++wcnt;
+  auto it = _results.begin();
+  _first_offset -= iovecs[0].iov_len;
+  ++it;
+  while (it != _results.end() && (_first_offset >= it->size())) {
+      _first_offset -= it->size();
+      ++it;
   }
 
-  _results.erase(_results.begin(), _results.begin() + wcnt);
+  _results.erase(_results.begin(), it);
   if (_results.empty()) {
       _event.events = r_mask;
   }
- }
+
+}//DoWrite
 
 } // namespace STnonblock
 } // namespace Network

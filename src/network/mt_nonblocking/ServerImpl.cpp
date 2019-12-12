@@ -193,8 +193,8 @@ void ServerImpl::OnRun() {
                 }
 
                 // Register the new FD to be monitored by epoll.
-                //Connection *pc = new Connection(infd);
-                Connection *pc = static_cast<Connection *>(current_event.data.ptr);
+
+                Connection *pc = new Connection(infd, pStorage);
                 if (pc == nullptr) {
                     throw std::runtime_error("Failed to allocate connection");
                 }
@@ -202,8 +202,8 @@ void ServerImpl::OnRun() {
                 // Register connection in worker's epoll
                 pc->Start(_logger);
                 if (pc->isAlive()) {
-                    pc->_event.events |= EPOLLONESHOT;
-                    //VS: don't forget edgetriggered!!!!!!
+                    pc->_event.events |= EPOLLONESHOT ;
+                    pc->_event.events |= EPOLLET;
                     int epoll_ctl_retval;
                     if ((epoll_ctl_retval = epoll_ctl(_data_epoll_fd, EPOLL_CTL_ADD, pc->_socket, &pc->_event))) {
                         _logger->debug("epoll_ctl failed during connection register in workers'epoll: error {}", epoll_ctl_retval);
