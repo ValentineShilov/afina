@@ -147,11 +147,20 @@ void Connection::DoWrite() {
 
     ssize_t bw;
     if ((bw = writev(_socket, iovecs, _results.size())) <= 0) {
-        bw = 0;
-        _logger->error("Failed to send response");
-        // what is better: schedulle write again or remove results/terminate the connection?
+      int error = errno;
+      bw = 0;
+      if(errno == EAGAIN || errno == EWOULDBLOCK)
+      {
         _event.events = rw_mask;
+        _logger->error("Failed to send response. Will try again later...");
         return;
+      }
+      else{
+        _logger->error("Critical error on sending response. Closing conenction");
+        _isAlive=false;
+        close(_socket);
+        return;
+      }
     }
 
     _first_offset += bw;
