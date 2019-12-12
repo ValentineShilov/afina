@@ -33,7 +33,7 @@ void Executor::Stop(bool await) {
 }
 void perform(Afina::Concurrency::Executor *ex) {
     std::function<void()> task;
-    // std::cout << "Thread created " << std::this_thread::get_id() <<std::endl;
+
     bool haveTask(false);
     while (ex->state == Executor::State::kRun) {
         {
@@ -70,7 +70,8 @@ void perform(Afina::Concurrency::Executor *ex) {
             try {
                 task();
             } catch (...) {
-                //
+                std::cerr << "Critical error: task function pointer is null. Thread id: " << std::this_thread::get_id()  << std::endl;
+                std::terminate();
             }
             haveTask = false;
         }

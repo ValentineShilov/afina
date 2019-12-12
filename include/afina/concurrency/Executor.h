@@ -43,10 +43,8 @@ public:
     };
 
     ~Executor() {
-        std::unique_lock<std::mutex> lock(mutex);
-        if (state == State::kRun) {
-            Stop(true);
-        }
+        Stop(true);
+
     }
 
     /**
