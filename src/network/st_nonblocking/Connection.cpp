@@ -160,8 +160,6 @@ void Connection::DoWrite() {
     _first_offset += bw;
 
     auto it = _results.begin();
-    _first_offset -= iovecs[0].iov_len;
-    ++it;
     while (it != _results.end() && (_first_offset >= it->size())) {
         _first_offset -= it->size();
         ++it;
