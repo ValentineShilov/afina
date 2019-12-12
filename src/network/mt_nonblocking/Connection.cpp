@@ -139,7 +139,7 @@ void Connection::DoWrite() {
 
     std::lock_guard<std::mutex> lock(mutex);
     // std::cout << "DoWrite" << std::endl;
-
+    assert(_results.size()>0);
     struct iovec iovecs[_results.size()];
     size_t i = 0;
     for (auto &res : _results) {
