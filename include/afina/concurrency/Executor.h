@@ -108,7 +108,6 @@ private:
     size_t idle_time;
     size_t nfree;
     size_t nthreads;
-    //  size_t nthreads;
 
 public:
     template <typename F, typename... Types> bool Execute(F &&func, Types... args) {

@@ -26,9 +26,10 @@ void Executor::Stop(bool await) {
 
         if (await && nthreads > 0) {
             stop_cv.wait(lock, [&]() { return nthreads == 0; });
-        } else if (await) {
-            state = State::kStopped;
         }
+
+        state = State::kStopped;
+
     }
 }
 void perform(Afina::Concurrency::Executor *ex) {
