@@ -127,9 +127,6 @@ void Connection::DoRead() {
             } // while (readed_bytes)
         }
 
-        if (readed_bytes == 0) {
-            _logger->debug("End of read session");
-        }
     } catch (std::runtime_error &ex) {
         _logger->error("Failed to process connection on descriptor {}: {}", client_socket, ex.what());
     }
