@@ -28,7 +28,9 @@ void Executor::Stop(bool await) {
             stop_cv.wait(lock, [&]() { return nthreads == 0; });
         }
 
-        state = State::kStopped;
+        if(nthreads == 0) {
+          state = State::kStopped;
+        }
 
     }
 }
