@@ -18,8 +18,7 @@ public:
 
     inline bool isAlive() const { return true; }
 
-    void Start(); // prepare to read
-    // recomended queue size - 64
+    void Start();
 
 protected:
     void OnError();
